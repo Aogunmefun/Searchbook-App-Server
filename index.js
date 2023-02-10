@@ -4,20 +4,26 @@ const jwt = require('jsonwebtoken')
 const axios = require("axios")
 
 const app = express()
+app.use(express.json())
 
 const users = []
 
+
+
 const verifyToken = (req, res, next) => {
     const token = req.headers["x-access-token"];
-  
+    console.log(token)
     if (!token) {
       return res.status(401).end();
     }
     try {
-      const decoded = jwt.verify(token, config.TOKEN_KEY);
+      const decoded = jwt.verify(token, process.env.TOKEN_KEY);
       req.user = decoded;
+      console.log("Verify", req.user)
     } catch (err) {
+        console.log(err)
       return res.status(401).end()
+      
     }
     return next();
 };
@@ -28,14 +34,17 @@ app.get("/", (req,res)=>{
 })
 
 app.post("/register",(req,res)=>{
+    
     users.push({username: req.body.username, password: req.body.password, wishlist:[]})
     res.status(200).json({res: "success"})
 })
 
 app.post("/login", (req,res)=>{
     let user = users.filter((el,index)=>el.username===req.body.username)
+    console.log("user", user)
+    console.log("incoming", req.body)
     if (user.length === 0) res.json({res: "no user found"})
-    else if (user.password !== req.body.password) res.json({res: "bad password"})
+    else if (user[0].password !== req.body.password) res.json({res: "bad password"})
     else {
         const token = jwt.sign(
             { username: users.username},
@@ -65,10 +74,11 @@ app.post("/getwishlist", verifyToken, (req,res)=>{
 })
 
 app.post("/addwishlist", verifyToken, (req,res)=>{
+    
     let user = users.filter((el,index)=>el.username===req.user.username)
-    user.wishlist.push(req.body.item)
+    user[0].wishlist.push(req.body.item)
     users = users.map((el,index)=>{
-        if (el.username===req.user.username) return user
+        if (el.username===req.user.username) return user[0]
         else return el
     })
 
@@ -76,9 +86,9 @@ app.post("/addwishlist", verifyToken, (req,res)=>{
 
 app.post("/removewishlist", verifyToken, (req,res)=>{
     let user = users.filter((el,index)=>el.username===req.user.username)
-    user.wishlist = user.wishlist.filter((item,index)=>req.body.item!==item)
+    user[0].wishlist = user[0].wishlist.filter((item,index)=>req.body.item!==item)
     users = users.map((el,index)=>{
-        if (el.username===req.user.username) return user
+        if (el.username===req.user.username) return user[0]
         else return el
     })
 })
